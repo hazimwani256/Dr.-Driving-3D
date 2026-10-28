@@ -1,0 +1,1149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Dr. Driving 3D - Ultimate Simulator</title>
+  <style>
+    :root {
+      --bg-dark: #070913;
+      --panel-bg: rgba(15, 20, 32, 0.92);
+      --accent-cyan: #00f0ff;
+      --accent-gold: #ffb700;
+      --accent-red: #ff3355;
+      --accent-green: #00ff88;
+      --text-main: #f0f4f8;
+      --text-muted: #7f8c9d;
+    }
+
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+      margin: 0;
+      padding: 0;
+    }
+
+    body, html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #020307;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      color: var(--text-main);
+    }
+
+    #game-container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      max-width: 500px;
+      margin: 0 auto;
+      background: var(--bg-dark);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 0 50px rgba(0,0,0,0.8);
+    }
+
+    /* Screen Views */
+    .screen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      z-index: 10;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+
+    .screen.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* Main Canvas Area */
+    #canvas-wrap {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* Modern UI Components */
+    .glass-panel {
+      background: var(--panel-bg);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+    }
+
+    .btn {
+      background: linear-gradient(135deg, rgba(0, 240, 255, 0.2), rgba(0, 100, 255, 0.3));
+      border: 1px solid var(--accent-cyan);
+      color: #fff;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      padding: 14px 24px;
+      border-radius: 12px;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(0, 240, 255, 0.2);
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .btn:active {
+      transform: scale(0.96);
+      box-shadow: 0 2px 8px rgba(0, 240, 255, 0.4);
+    }
+
+    .btn-gold {
+      background: linear-gradient(135deg, rgba(255, 183, 0, 0.2), rgba(255, 100, 0, 0.3));
+      border-color: var(--accent-gold);
+      box-shadow: 0 4px 15px rgba(255, 183, 0, 0.2);
+    }
+
+    /* Menu Screen */
+    #menu-screen {
+      padding: 24px;
+      justify-content: space-between;
+      background: radial-gradient(circle at center, rgba(15,25,45,0.8) 0%, rgba(5,7,15,0.95) 100%);
+    }
+
+    .header-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-icon {
+      width: 44px;
+      height: 44px;
+      background: var(--accent-cyan);
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      color: #000;
+      font-weight: 900;
+      font-size: 22px;
+    }
+
+    .cash-badge {
+      padding: 8px 16px;
+      background: rgba(255, 183, 0, 0.15);
+      border: 1px solid var(--accent-gold);
+      border-radius: 20px;
+      color: var(--accent-gold);
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .hero-title {
+      text-align: center;
+      margin: 20px 0;
+    }
+
+    .hero-title h1 {
+      font-size: 32px;
+      letter-spacing: 2px;
+      color: #fff;
+      text-shadow: 0 0 20px rgba(0,240,255,0.5);
+    }
+
+    .hero-title p {
+      color: var(--text-muted);
+      font-size: 14px;
+      margin-top: 4px;
+    }
+
+    .menu-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    /* HUD Overlay (In-Game UI) */
+    #hud-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 5;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .top-hud {
+      padding: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      pointer-events: auto;
+    }
+
+    .hud-box {
+      padding: 10px 16px;
+      min-width: 120px;
+    }
+
+    .hud-val {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--accent-cyan);
+    }
+
+    .hud-lbl {
+      font-size: 10px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+
+    /* Rearview Mirror */
+    .mirror-view {
+      width: 140px;
+      height: 38px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-radius: 8px;
+      overflow: hidden;
+      background: #111;
+      position: relative;
+      margin: 0 auto;
+    }
+
+    #mirror-canvas {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Cockpit Overlay Base */
+    .cockpit-container {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 48%;
+      pointer-events: auto;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+    }
+
+    /* Dynamic Cockpit Graphics */
+    .dash-board {
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(180deg, rgba(20,24,35,0.4) 0%, rgba(10,12,18,0.98) 35%, #05070a 100%);
+      border-top: 3px solid #2a3245;
+      box-shadow: 0 -10px 30px rgba(0,0,0,0.8);
+      position: relative;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      padding: 12px 16px 20px 16px;
+    }
+
+    /* Steering Control */
+    .wheel-wrapper {
+      position: relative;
+      width: 170px;
+      height: 170px;
+      margin-left: -10px;
+    }
+
+    #steering-wheel {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: radial-gradient(circle at center, #1a1e29 30%, #0d1017 70%);
+      border: 12px solid #252a38;
+      box-shadow: inset 0 0 15px #000, 0 8px 20px rgba(0,0,0,0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.05s ease-out;
+      touch-action: none;
+      cursor: grab;
+    }
+
+    .wheel-center {
+      width: 54px;
+      height: 54px;
+      border-radius: 50%;
+      background: radial-gradient(circle, #3a4257 0%, #151821 100%);
+      border: 3px solid #505b75;
+      display: grid;
+      place-items: center;
+      font-weight: 900;
+      color: var(--accent-cyan);
+      box-shadow: 0 0 10px rgba(0,0,0,0.5);
+    }
+
+    .wheel-spoke {
+      position: absolute;
+      background: #252a38;
+    }
+    .spoke-h { width: 100%; height: 12px; top: calc(50% - 6px); left: 0; }
+    .spoke-v { width: 12px; height: 50%; bottom: 0; left: calc(50% - 6px); }
+
+    /* Center Dashboard Display */
+    .cluster-display {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 25px;
+    }
+
+    .speedometer-digital {
+      text-align: center;
+    }
+
+    .speed-val {
+      font-size: 38px;
+      font-weight: 900;
+      font-family: monospace;
+      color: #fff;
+      text-shadow: 0 0 12px var(--accent-cyan);
+    }
+
+    .speed-unit {
+      font-size: 11px;
+      color: var(--text-muted);
+      letter-spacing: 1px;
+    }
+
+    .gear-selector {
+      display: flex;
+      gap: 6px;
+      background: rgba(0,0,0,0.5);
+      padding: 4px;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .gear-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      background: rgba(255,255,255,0.05);
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+      font-size: 14px;
+      color: var(--text-muted);
+      cursor: pointer;
+    }
+
+    .gear-btn.active {
+      background: var(--accent-cyan);
+      color: #000;
+      box-shadow: 0 0 10px var(--accent-cyan);
+    }
+
+    /* Pedals Control */
+    .pedals-wrapper {
+      display: flex;
+      gap: 16px;
+      align-items: flex-end;
+      margin-bottom: 10px;
+    }
+
+    .pedal {
+      width: 52px;
+      background: linear-gradient(180deg, #333a4d 0%, #171a24 100%);
+      border: 2px solid #45506b;
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      padding-bottom: 10px;
+      box-shadow: inset 0 2px 5px rgba(255,255,255,0.2), 0 5px 15px rgba(0,0,0,0.6);
+      cursor: pointer;
+    }
+
+    .pedal-brake { height: 90px; }
+    .pedal-gas { height: 120px; }
+
+    .pedal:active, .pedal.pressed {
+      transform: translateY(4px) scale(0.98);
+      background: linear-gradient(180deg, #171a24 0%, #333a4d 100%);
+      border-color: var(--accent-cyan);
+    }
+
+    .pedal-label {
+      font-size: 10px;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: 1px;
+    }
+
+    /* Modal / Popups */
+    .modal-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(3, 5, 10, 0.85);
+      backdrop-filter: blur(8px);
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .modal-card {
+      width: 100%;
+      max-width: 360px;
+      padding: 24px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      animation: popIn 0.3s ease;
+    }
+
+    @keyframes popIn {
+      from { transform: scale(0.8); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
+    /* Garage Grid */
+    .car-selector {
+      display: flex;
+      gap: 12px;
+      overflow-x: auto;
+      padding: 10px 0;
+    }
+
+    .car-card {
+      min-width: 140px;
+      padding: 12px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px;
+      cursor: pointer;
+      text-align: center;
+    }
+
+    .car-card.selected {
+      border-color: var(--accent-cyan);
+      background: rgba(0,240,255,0.1);
+    }
+
+    .stat-bar {
+      height: 6px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 3px;
+      overflow: hidden;
+      margin-top: 4px;
+    }
+
+    .stat-fill {
+      height: 100%;
+      background: var(--accent-cyan);
+    }
+  </style>
+</head>
+<body>
+
+<div id="game-container">
+  
+  <!-- Render Canvas -->
+  <div id="canvas-wrap">
+    <canvas id="gameCanvas"></canvas>
+  </div>
+
+  <!-- HUD In-Game Overlay -->
+  <div id="hud-layer" style="display: none;">
+    <div class="top-hud">
+      <div class="glass-panel hud-box">
+        <div class="hud-lbl" id="mission-type-lbl">MISSION</div>
+        <div class="hud-val" id="mission-target-lbl">0m / 500m</div>
+      </div>
+
+      <div class="mirror-view">
+        <canvas id="mirror-canvas"></canvas>
+      </div>
+
+      <div class="glass-panel hud-box" style="text-align: right;">
+        <div class="hud-lbl">TIME / COMFORT</div>
+        <div class="hud-val" id="hud-secondary">100%</div>
+      </div>
+    </div>
+
+    <!-- Realistic Cockpit Controls -->
+    <div class="cockpit-container">
+      <div class="dash-board">
+        
+        <!-- Interactive Steering -->
+        <div class="wheel-wrapper">
+          <div id="steering-wheel">
+            <div class="wheel-spoke spoke-h"></div>
+            <div class="wheel-spoke spoke-v"></div>
+            <div class="wheel-center">DR</div>
+          </div>
+        </div>
+
+        <!-- Speedometer & Gear Center -->
+        <div class="cluster-display">
+          <div class="speedometer-digital">
+            <div class="speed-val" id="speed-num">0</div>
+            <div class="speed-unit">KM / H</div>
+          </div>
+
+          <div class="gear-selector">
+            <div class="gear-btn" id="gear-P">P</div>
+            <div class="gear-btn" id="gear-R">R</div>
+            <div class="gear-btn active" id="gear-D">D</div>
+          </div>
+        </div>
+
+        <!-- Throttle & Brake Pedals -->
+        <div class="pedals-wrapper">
+          <div class="pedal pedal-brake" id="btn-brake">
+            <span class="pedal-label">BRAKE</span>
+          </div>
+          <div class="pedal pedal-gas" id="btn-gas">
+            <span class="pedal-label">GAS</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Menu Screen -->
+  <div class="screen active" id="menu-screen">
+    <div class="header-bar">
+      <div class="logo-container">
+        <div class="logo-icon">DR</div>
+        <div>
+          <h2 style="font-size: 16px;">DR. DRIVING</h2>
+          <span style="font-size: 10px; color: var(--text-muted);">PRECISION 3D</span>
+        </div>
+      </div>
+      <div class="cash-badge">
+        <span>$</span>
+        <span id="player-cash">1200</span>
+      </div>
+    </div>
+
+    <div class="hero-title">
+      <h1>MASTER THE STREETS</h1>
+      <p>Precision Driving & Real Urban Missions</p>
+    </div>
+
+    <div class="menu-actions">
+      <button class="btn btn-gold" id="btn-start-game">SELECT MISSION</button>
+      <button class="btn" id="btn-open-garage">GARAGE & UPGRADES</button>
+    </div>
+  </div>
+
+  <!-- Mission Select Modal -->
+  <div class="modal-overlay" id="mission-modal" style="display: none;">
+    <div class="glass-panel modal-card">
+      <h3 style="color: var(--accent-cyan);">SELECT MISSION MODE</h3>
+      
+      <div class="btn" onclick="startGame('comfort')">
+        VIP ESCORT (COMFORT)
+      </div>
+      <div class="btn" onclick="startGame('speed')">
+        SPEED CHALLENGE
+      </div>
+      <div class="btn" onclick="startGame('parking')">
+        PRECISION PARKING
+      </div>
+      <div class="btn" onclick="startGame('fuel')">
+        FUEL SAVER
+      </div>
+
+      <button class="btn" style="background: transparent; border-color: rgba(255,255,255,0.2);" onclick="closeModals()">CANCEL</button>
+    </div>
+  </div>
+
+  <!-- Garage Modal -->
+  <div class="modal-overlay" id="garage-modal" style="display: none;">
+    <div class="glass-panel modal-card" style="max-width: 420px;">
+      <h3 style="color: var(--accent-gold);">VEHICLE GARAGE</h3>
+
+      <div class="car-selector" id="car-list">
+        <!-- Injected dynamically -->
+      </div>
+
+      <div style="text-align: left; margin-top: 10px;">
+        <div style="font-size: 12px; color: var(--text-muted);">TOP SPEED</div>
+        <div class="stat-bar"><div class="stat-fill" id="stat-speed" style="width: 60%;"></div></div>
+
+        <div style="font-size: 12px; color: var(--text-muted); margin-top: 8px;">HANDLING</div>
+        <div class="stat-bar"><div class="stat-fill" id="stat-handling" style="width: 70%;"></div></div>
+      </div>
+
+      <button class="btn btn-gold" id="btn-upgrade">UPGRADE ($500)</button>
+      <button class="btn" style="background: transparent; border-color: rgba(255,255,255,0.2);" onclick="closeModals()">BACK</button>
+    </div>
+  </div>
+
+  <!-- End Game Results Modal -->
+  <div class="modal-overlay" id="result-modal" style="display: none;">
+    <div class="glass-panel modal-card">
+      <h2 id="result-title" style="color: var(--accent-green);">MISSION PASSED!</h2>
+      <p id="result-desc" style="color: var(--text-muted); font-size: 14px;">Great job maintaining smooth comfort!</p>
+
+      <div class="glass-panel" style="padding: 12px;">
+        <div style="font-size: 12px; color: var(--text-muted);">REWARD EARNED</div>
+        <div style="font-size: 24px; font-weight: 900; color: var(--accent-gold);" id="result-reward">+$300</div>
+      </div>
+
+      <button class="btn btn-gold" onclick="returnToMenu()">CONTINUE</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/**
+ * Dr. Driving 3D - Core Game Engine
+ */
+
+// Audio Synthesizer
+const AudioEngine = {
+  ctx: null,
+  init() {
+    if (!this.ctx) {
+      this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+  },
+  playTone(freq, duration, type = 'sine') {
+    if (!this.ctx) return;
+    try {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+      gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + duration);
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start();
+      osc.stop(this.ctx.currentTime + duration);
+    } catch (e) {}
+  },
+  playClick() { this.playTone(800, 0.05); },
+  playCrash() { this.playTone(100, 0.4, 'sawtooth'); }
+};
+
+// Vehicles Database
+const VEHICLES = [
+  { id: 0, name: 'Compact Urban', speed: 120, handling: 1.0, price: 0, color: '#00f0ff' },
+  { id: 1, name: 'Executive Sedan', speed: 150, handling: 1.2, price: 1000, color: '#ffb700' },
+  { id: 2, name: 'Supercharged Coupe', speed: 180, handling: 1.5, price: 2500, color: '#ff3355' }
+];
+
+// State Management
+const state = {
+  cash: 1200,
+  currentCar: 0,
+  upgrades: { 0: 0, 1: 0, 2: 0 },
+  activeMission: null,
+  inGame: false,
+  
+  // Physics & Vehicle Controls
+  speed: 0,
+  maxSpeed: 120,
+  acceleration: 0,
+  steering: 0, // -1 (left) to 1 (right)
+  gear: 'D', // 'P', 'R', 'D'
+  gasPressed: false,
+  brakePressed: false,
+  
+  // Progression & Rules
+  playerX: 0, // -1 to 1 lane bounds
+  distance: 0,
+  comfort: 100,
+  fuel: 100,
+  timeElapsed: 0,
+  immunityTimer: 0, // Immunity on mission spawn
+  
+  // Environment World Arrays
+  traffic: [],
+  buildings: []
+};
+
+// Canvas Setup
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const mirrorCanvas = document.getElementById('mirror-canvas');
+const mirrorCtx = mirrorCanvas.getContext('2d');
+
+function resizeCanvas() {
+  const container = document.getElementById('canvas-wrap');
+  canvas.width = container.clientWidth;
+  canvas.height = container.clientHeight;
+  mirrorCanvas.width = 140;
+  mirrorCanvas.height = 38;
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+// Traffic Generator
+function spawnTraffic() {
+  state.traffic = [];
+  for (let i = 0; i < 4; i++) {
+    state.traffic.push({
+      x: (Math.random() - 0.5) * 1.5,
+      z: 450 + i * 250, // Far ahead safe distance
+      speed: 30 + Math.random() * 40,
+      color: ['#ff4444', '#4488ff', '#ffffff', '#ffbb00'][Math.floor(Math.random() * 4)]
+    });
+  }
+}
+
+// Pseudo-3D Perspective Projection
+function project(x, y, z, width, height) {
+  const fov = 200;
+  const scale = fov / (fov + z);
+  const px = (x * scale * width) + (width / 2);
+  const py = (y * scale * height) + (height / 2) + 20;
+  return { x: px, y: py, scale: scale };
+}
+
+// Game Rendering Loop
+function render() {
+  const w = canvas.width;
+  const h = canvas.height;
+
+  // Clear Screen
+  ctx.fillStyle = '#090c15';
+  ctx.fillRect(0, 0, w, h);
+
+  // Dynamic Horizon Sky Gradient
+  const skyGradient = ctx.createLinearGradient(0, 0, 0, h * 0.55);
+  skyGradient.addColorStop(0, '#05070e');
+  skyGradient.addColorStop(1, '#1a2236');
+  ctx.fillStyle = skyGradient;
+  ctx.fillRect(0, 0, w, h * 0.55);
+
+  // Background City Skyline
+  ctx.fillStyle = '#0f1423';
+  for (let i = 0; i < 10; i++) {
+    const bx = (i * 60) - ((state.distance * 0.1) % 60);
+    const bh = 80 + (i % 3) * 40;
+    ctx.fillRect(bx, h * 0.55 - bh, 55, bh);
+  }
+
+  // Draw 3D Road Perspective
+  const horizon = h * 0.52;
+  const roadBottom = h;
+
+  ctx.beginPath();
+  ctx.fillStyle = '#181c26';
+  ctx.moveTo(w * 0.35, horizon);
+  ctx.lineTo(w * 0.65, horizon);
+  ctx.lineTo(w * 1.1, roadBottom);
+  ctx.lineTo(-w * 0.1, roadBottom);
+  ctx.fill();
+
+  // Lane Markings
+  ctx.strokeStyle = '#ffb700';
+  ctx.lineWidth = 3;
+  ctx.setLineDash([20, 20]);
+  ctx.lineDashOffset = -(state.distance * 2) % 40;
+  
+  ctx.beginPath();
+  ctx.moveTo(w * 0.5, horizon);
+  ctx.lineTo(w * 0.5, roadBottom);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Render AI Traffic
+  state.traffic.forEach(car => {
+    // Relative distance to player
+    const relZ = car.z;
+    if (relZ > 5 && relZ < 800) {
+      const p = project(car.x - state.playerX, 80, relZ, w, h);
+      const carW = 120 * p.scale;
+      const carH = 60 * p.scale;
+
+      ctx.fillStyle = car.color;
+      ctx.fillRect(p.x - carW / 2, p.y - carH, carW, carH);
+      
+      // Taillights
+      ctx.fillStyle = '#ff0000';
+      ctx.fillRect(p.x - carW / 2 + 2, p.y - carH + 2, carW * 0.2, 8 * p.scale);
+      ctx.fillRect(p.x + carW / 2 - carW * 0.2 - 2, p.y - carH + 2, carW * 0.2, 8 * p.scale);
+    }
+  });
+
+  // Render Rearview Mirror
+  renderMirror();
+}
+
+function renderMirror() {
+  const mw = mirrorCanvas.width;
+  const mh = mirrorCanvas.height;
+  mirrorCtx.fillStyle = '#0b0e14';
+  mirrorCtx.fillRect(0, 0, mw, mh);
+
+  // Trailing Road
+  mirrorCtx.fillStyle = '#181c26';
+  mirrorCtx.beginPath();
+  mirrorCtx.moveTo(mw * 0.3, mh);
+  mirrorCtx.lineTo(mw * 0.7, mh);
+  mirrorCtx.lineTo(mw * 0.55, 0);
+  mirrorCtx.lineTo(mw * 0.45, 0);
+  mirrorCtx.fill();
+}
+
+// Update Loop Physics & Gameplay Mechanics
+let lastTime = performance.now();
+function update() {
+  const now = performance.now();
+  const dt = (now - lastTime) / 1000;
+  lastTime = now;
+
+  if (state.inGame) {
+    state.timeElapsed += dt;
+
+    if (state.immunityTimer > 0) {
+      state.immunityTimer -= dt;
+    }
+
+    // Acceleration Logic
+    if (state.gear === 'D' && state.gasPressed) {
+      state.speed += (25 + state.upgrades[state.currentCar] * 5) * dt;
+    } else if (state.gear === 'R' && state.gasPressed) {
+      state.speed -= 15 * dt;
+    } else if (state.brakePressed) {
+      if (state.speed > 0) state.speed -= 40 * dt;
+      if (state.speed < 0) state.speed += 40 * dt;
+    } else {
+      // Natural Friction Drag
+      state.speed *= 0.98;
+    }
+
+    // Speed Constraints
+    const currentMax = VEHICLES[state.currentCar].speed + state.upgrades[state.currentCar] * 10;
+    state.speed = Math.max(-30, Math.min(currentMax, state.speed));
+
+    // Steering Physics
+    const turnSpeed = VEHICLES[state.currentCar].handling * 0.8;
+    state.playerX += state.steering * (state.speed / 100) * turnSpeed * dt;
+    state.playerX = Math.max(-1.2, Math.min(1.2, state.playerX));
+
+    // Distance Calculation
+    state.distance += (state.speed * dt * 0.5);
+
+    // Update AI Traffic Positions
+    state.traffic.forEach(car => {
+      car.z -= (state.speed - car.speed) * dt * 5;
+
+      // Recycle Traffic
+      if (car.z < -50) {
+        car.z = 800;
+        car.x = (Math.random() - 0.5) * 1.5;
+      }
+
+      // Collision Detection Bounding Box
+      if (state.immunityTimer <= 0) {
+        if (Math.abs(car.z) < 35 && Math.abs(car.x - state.playerX) < 0.28) {
+          AudioEngine.playCrash();
+          endGame(false, "Traffic Collision Occurred!");
+        }
+      }
+    });
+
+    // Missions Logic Checks
+    checkMissionProgress(dt);
+    
+    // UI HUD Synchronization
+    updateHUD();
+  }
+
+  render();
+  requestAnimationFrame(update);
+}
+
+function checkMissionProgress(dt) {
+  if (state.activeMission === 'comfort') {
+    // Comfort penalties on harsh turning or braking
+    if (Math.abs(state.steering) > 0.8 && state.speed > 60) {
+      state.comfort = Math.max(0, state.comfort - 15 * dt);
+    }
+    if (state.distance >= 600) endGame(true, "Destination Reached Smoothly!");
+  } else if (state.activeMission === 'speed') {
+    if (state.timeElapsed > 30) endGame(false, "Time Limit Expired!");
+    if (state.distance >= 800) endGame(true, "Speed Target Achieved!");
+  } else if (state.activeMission === 'parking') {
+    if (state.distance >= 400 && Math.abs(state.speed) < 1) {
+      endGame(true, "Parked Perfectly!");
+    }
+  } else if (state.activeMission === 'fuel') {
+    if (state.gasPressed) state.fuel -= 3 * dt;
+    if (state.fuel <= 0) endGame(false, "Ran Out of Fuel!");
+    if (state.distance >= 500) endGame(true, "Destination Reached Efficiently!");
+  }
+}
+
+function updateHUD() {
+  document.getElementById('speed-num').textContent = Math.abs(Math.round(state.speed));
+
+  if (state.activeMission === 'comfort') {
+    document.getElementById('mission-type-lbl').textContent = "COMFORT ESCORT";
+    document.getElementById('mission-target-lbl').textContent = Math.round(state.distance) + "m / 600m";
+    document.getElementById('hud-secondary').textContent = Math.round(state.comfort) + "%";
+  } else if (state.activeMission === 'speed') {
+    document.getElementById('mission-type-lbl').textContent = "SPEED RUN";
+    document.getElementById('mission-target-lbl').textContent = Math.round(state.distance) + "m / 800m";
+    document.getElementById('hud-secondary').textContent = Math.round(30 - state.timeElapsed) + "s";
+  } else if (state.activeMission === 'parking') {
+    document.getElementById('mission-type-lbl').textContent = "PARK DESTINATION";
+    document.getElementById('mission-target-lbl').textContent = Math.round(state.distance) + "m / 400m";
+    document.getElementById('hud-secondary').textContent = state.speed < 2 ? "STOP HERE" : "DRIVE";
+  } else if (state.activeMission === 'fuel') {
+    document.getElementById('mission-type-lbl').textContent = "FUEL SAVER";
+    document.getElementById('mission-target-lbl').textContent = Math.round(state.distance) + "m / 500m";
+    document.getElementById('hud-secondary').textContent = Math.round(state.fuel) + "%";
+  }
+}
+
+// User Action Controllers
+function startGame(missionType) {
+  AudioEngine.init();
+  AudioEngine.playClick();
+  
+  closeModals();
+  state.activeMission = missionType;
+  state.inGame = true;
+  state.speed = 0;
+  state.distance = 0;
+  state.playerX = 0;
+  state.comfort = 100;
+  state.fuel = 100;
+  state.timeElapsed = 0;
+  state.immunityTimer = 2.0; // 2 seconds safety window
+
+  spawnTraffic();
+
+  document.getElementById('menu-screen').classList.remove('active');
+  document.getElementById('hud-layer').style.display = 'flex';
+}
+
+function endGame(success, message) {
+  state.inGame = false;
+  document.getElementById('hud-layer').style.display = 'none';
+  
+  const modal = document.getElementById('result-modal');
+  const title = document.getElementById('result-title');
+  const desc = document.getElementById('result-desc');
+  const reward = document.getElementById('result-reward');
+
+  if (success) {
+    const earned = 300 + Math.round(state.comfort * 2);
+    state.cash += earned;
+    document.getElementById('player-cash').textContent = state.cash;
+    title.textContent = "MISSION PASSED!";
+    title.style.color = "var(--accent-green)";
+    desc.textContent = message;
+    reward.textContent = "+$" + earned;
+  } else {
+    title.textContent = "MISSION FAILED!";
+    title.style.color = "var(--accent-red)";
+    desc.textContent = message;
+    reward.textContent = "+$0";
+  }
+
+  modal.style.display = 'flex';
+}
+
+function returnToMenu() {
+  closeModals();
+  document.getElementById('menu-screen').classList.add('active');
+}
+
+function closeModals() {
+  document.getElementById('mission-modal').style.display = 'none';
+  document.getElementById('garage-modal').style.display = 'none';
+  document.getElementById('result-modal').style.display = 'none';
+}
+
+// UI Event Handlers
+document.getElementById('btn-start-game').addEventListener('click', () => {
+  AudioEngine.init();
+  AudioEngine.playClick();
+  document.getElementById('mission-modal').style.display = 'flex';
+});
+
+document.getElementById('btn-open-garage').addEventListener('click', () => {
+  AudioEngine.init();
+  AudioEngine.playClick();
+  renderGarage();
+  document.getElementById('garage-modal').style.display = 'flex';
+});
+
+function renderGarage() {
+  const container = document.getElementById('car-list');
+  container.innerHTML = '';
+
+  VEHICLES.forEach((car, index) => {
+    const card = document.createElement('div');
+    card.className = `car-card ${state.currentCar === index ? 'selected' : ''}`;
+    card.innerHTML = `
+      <div style="font-weight: 800; font-size: 13px;">${car.name}</div>
+      <div style="font-size: 11px; color: var(--accent-gold); margin-top: 4px;">${car.price === 0 ? 'OWNED' : '$' + car.price}</div>
+    `;
+    card.onclick = () => {
+      if (state.cash >= car.price) {
+        state.currentCar = index;
+        renderGarage();
+      }
+    };
+    container.appendChild(card);
+  });
+
+  const car = VEHICLES[state.currentCar];
+  const level = state.upgrades[state.currentCar] || 0;
+  document.getElementById('stat-speed').style.width = Math.min(100, (car.speed + level * 10) / 2) + '%';
+  document.getElementById('stat-handling').style.width = Math.min(100, (car.handling + level * 0.2) * 50) + '%';
+}
+
+document.getElementById('btn-upgrade').addEventListener('click', () => {
+  if (state.cash >= 500) {
+    state.cash -= 500;
+    state.upgrades[state.currentCar] = (state.upgrades[state.currentCar] || 0) + 1;
+    document.getElementById('player-cash').textContent = state.cash;
+    renderGarage();
+    AudioEngine.playClick();
+  }
+});
+
+// Interactive Steering Wheel & Pedal Controls Setup
+const wheel = document.getElementById('steering-wheel');
+let isDraggingWheel = false;
+let startAngle = 0;
+
+function getAngle(x, y, rect) {
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+  return Math.atan2(y - cy, x - cx) * (180 / Math.PI);
+}
+
+wheel.addEventListener('pointerdown', (e) => {
+  isDraggingWheel = true;
+  const rect = wheel.getBoundingClientRect();
+  startAngle = getAngle(e.clientX, e.clientY, rect);
+});
+
+window.addEventListener('pointermove', (e) => {
+  if (!isDraggingWheel) return;
+  const rect = wheel.getBoundingClientRect();
+  const currentAngle = getAngle(e.clientX, e.clientY, rect);
+  let rot = currentAngle - startAngle;
+
+  rot = Math.max(-120, Math.min(120, rot));
+  wheel.style.transform = `rotate(${rot}deg)`;
+  state.steering = rot / 120;
+});
+
+window.addEventListener('pointerup', () => {
+  if (isDraggingWheel) {
+    isDraggingWheel = false;
+    wheel.style.transform = `rotate(0deg)`;
+    state.steering = 0;
+  }
+});
+
+// Pedal Event Listeners
+const btnGas = document.getElementById('btn-gas');
+const btnBrake = document.getElementById('btn-brake');
+
+btnGas.addEventListener('pointerdown', () => { state.gasPressed = true; btnGas.classList.add('pressed'); });
+btnGas.addEventListener('pointerup', () => { state.gasPressed = false; btnGas.classList.remove('pressed'); });
+btnGas.addEventListener('pointerleave', () => { state.gasPressed = false; btnGas.classList.remove('pressed'); });
+
+btnBrake.addEventListener('pointerdown', () => { state.brakePressed = true; btnBrake.classList.add('pressed'); });
+btnBrake.addEventListener('pointerup', () => { state.brakePressed = false; btnBrake.classList.remove('pressed'); });
+btnBrake.addEventListener('pointerleave', () => { state.brakePressed = false; btnBrake.classList.remove('pressed'); });
+
+// Gear Selector Controls
+['P', 'R', 'D'].forEach(gear => {
+  document.getElementById(`gear-${gear}`).addEventListener('click', () => {
+    AudioEngine.playClick();
+    state.gear = gear;
+    ['P', 'R', 'D'].forEach(g => document.getElementById(`gear-${g}`).classList.remove('active'));
+    document.getElementById(`gear-${gear}`).classList.add('active');
+  });
+});
+
+// Keyboard Controls Support (A/D or Left/Right for Steering, W/S or Up/Down for Pedals)
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'a' || e.key === 'ArrowLeft') {
+    state.steering = -1;
+    wheel.style.transform = 'rotate(-90deg)';
+  }
+  if (e.key === 'd' || e.key === 'ArrowRight') {
+    state.steering = 1;
+    wheel.style.transform = 'rotate(90deg)';
+  }
+  if (e.key === 'w' || e.key === 'ArrowUp') {
+    state.gasPressed = true;
+    btnGas.classList.add('pressed');
+  }
+  if (e.key === 's' || e.key === 'ArrowDown') {
+    state.brakePressed = true;
+    btnBrake.classList.add('pressed');
+  }
+});
+
+window.addEventListener('keyup', (e) => {
+  if (e.key === 'a' || e.key === 'ArrowLeft' || e.key === 'd' || e.key === 'ArrowRight') {
+    state.steering = 0;
+    wheel.style.transform = 'rotate(0deg)';
+  }
+  if (e.key === 'w' || e.key === 'ArrowUp') {
+    state.gasPressed = false;
+    btnGas.classList.remove('pressed');
+  }
+  if (e.key === 's' || e.key === 'ArrowDown') {
+    state.brakePressed = false;
+    btnBrake.classList.remove('pressed');
+  }
+});
+
+// Start Main Animation Engine Loop
+requestAnimationFrame(update);
+</script>
+
+</body>
+</html>
